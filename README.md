@@ -5,7 +5,7 @@ Implements TMM (Transfer Matrix Method).
 We compute reflectance spectra R(λ) and spatial E-field standing wave |E(x)|² from first principles.
 Semiconductor types are GaAs/AlAs, SiO₂/TiO₂, and Si/SiO₂ multilayer stacks.
 
-[Live demo](profound-sundae-8e7853.netlify.app) 
+[(https://profound-sundae-8e7853.netlify.app/)](profound-sundae-8e7853.netlify.app) 
 
 Explanation; 
 

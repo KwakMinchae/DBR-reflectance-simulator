@@ -1,4 +1,4 @@
-#Tldr;
+# Tldr;
 
 Web-based DBR mirror simulator built using vanilla JS.
 Implements TMM (Transfer Matrix Method).
@@ -9,7 +9,7 @@ Semiconductor types are GaAs/AlAs, SiO₂/TiO₂, and Si/SiO₂ multilayer stack
 
 Explanation; 
 
-#Physics background
+# Physics background
 
 A DBR mirror is made of alternating high- and low-refractive-index layers, 
 each exactly a quarter-wavelength thick (d = λ₀/4n). 
@@ -21,7 +21,7 @@ Understanding how to design these mirrors
 (peak R, stopband width, field distribution) is foundational for 
 VCSEL and superconducting qubit readout resonator design
 
-#Tech stack
+# Tech stack
 Vanilla HTML / CSS / JavaScript — no build tools, no framework
 Chart.js for the reflectance spectrum and E-field bar chart
 All TMM physics computed in real time

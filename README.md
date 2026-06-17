@@ -1,4 +1,4 @@
-****Tldr; ****
+Tldr; 
 Web-based DBR mirror simulator built using vanilla JS.
 Implements TMM (Transfer Matrix Method).
 We compute reflectance spectra R(λ) and spatial E-field standing wave |E(x)|² from first principles.

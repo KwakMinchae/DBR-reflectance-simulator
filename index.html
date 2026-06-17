@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DBR Simulator</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f5f7fb;--white:#fff;--surf:#f0f2f7;--border:#dde2ed;--border2:#c5ccdb;
+  --text:#1a2233;--muted:#64748b;--light:#94a3b8;
+  --teal:#0d9488;--teal-bg:#f0fdfa;--teal-bd:#99f6e4;
+  --blue:#1d6fa4;--blue-bg:#eff6ff;
+  --purple:#6d28d9;--amber:#b45309;--red:#b91c1c;
+  --sans:'Inter',sans-serif;--mono:'JetBrains Mono',monospace;
+}
+html,body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:14px;line-height:1.6;min-height:100vh}
+
+/* HEADER */
+header{background:var(--white);border-bottom:1px solid var(--border);padding:.9rem 2rem;display:flex;align-items:center;gap:1rem}
+.hlogo{background:var(--teal);color:#fff;font-family:var(--mono);font-size:10px;padding:4px 9px;border-radius:5px;letter-spacing:.5px;flex-shrink:0}
+.htitle{font-size:16px;font-weight:600}
+.hsub{font-size:11px;color:var(--muted);font-family:var(--mono);margin-top:1px}
+.hpill{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--teal);border:1px solid var(--teal-bd);background:var(--teal-bg);padding:3px 10px;border-radius:20px;white-space:nowrap}
+
+.page{max-width:1100px;margin:0 auto;padding:1.5rem}
+.page>*+*{margin-top:1rem}
+
+/* COLLAPSIBLE SECTION */
+.section{background:var(--white);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.sec-hd{padding:.85rem 1.25rem;display:flex;align-items:center;gap:.75rem;cursor:pointer;user-select:none;transition:background .15s}
+.sec-hd:hover{background:var(--surf)}
+.sec-num{width:22px;height:22px;border-radius:50%;background:var(--teal);color:#fff;font-size:10px;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:var(--mono)}
+.sec-title{font-size:13px;font-weight:600;flex:1}
+.sec-badge{font-family:var(--mono);font-size:10px;color:var(--muted);background:var(--surf);border:1px solid var(--border);padding:2px 8px;border-radius:12px}
+.chevron{width:16px;height:16px;flex-shrink:0;transition:transform .25s;color:var(--light)}
+.chevron path{stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.section.collapsed .chevron{transform:rotate(-90deg)}
+.sec-body{padding:1.25rem 1.5rem;border-top:1px solid var(--border);overflow:hidden;transition:max-height .35s ease,padding .35s ease,opacity .25s ease;opacity:1}
+.section.collapsed .sec-body{max-height:0!important;padding-top:0;padding-bottom:0;opacity:0;border-top:none}
+
+/* ══ SECTION 1: DEVICE DIAGRAM ══ */
+.device-wrap{display:flex;gap:2rem;align-items:flex-start;flex-wrap:wrap}
+.device-svg-wrap{flex:1;min-width:300px}
+.device-legend{flex:0 0 250px}
+.dl+.dl{margin-top:10px}
+.dl{display:flex;gap:9px;align-items:flex-start}
+.dl-dot{width:11px;height:11px;border-radius:3px;flex-shrink:0;margin-top:3px}
+.dl-name{font-size:12px;font-weight:500}
+.dl-desc{font-size:11px;color:var(--muted);line-height:1.5;margin-top:1px}
+
+/* QW detail panel */
+.qw-panel{margin-top:1.25rem;background:var(--surf);border:1px solid var(--border);border-radius:8px;overflow:hidden;display:none}
+.qw-panel.open{display:block}
+.qw-panel-header{padding:.75rem 1rem;background:var(--blue-bg);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.qw-panel-title{font-size:12px;font-weight:600;color:var(--blue)}
+.qw-close{background:none;border:none;cursor:pointer;font-size:16px;color:var(--muted);line-height:1}
+.qw-inner{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;padding:1.25rem}
+@media(max-width:600px){.qw-inner{grid-template-columns:1fr}}
+.qw-sec-label{font-size:10px;font-weight:600;letter-spacing:.8px;text-transform:uppercase;color:var(--muted);font-family:var(--mono);margin-bottom:.5rem}
+.qw-caption{font-size:11px;color:var(--muted);line-height:1.6;margin-top:.6rem}
+.qw-caption b{color:var(--text)}
+
+/* ══ SECTION 2: FORMULA ══ */
+.formula-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1rem}
+.fbox{background:var(--surf);border:1px solid var(--border);border-radius:8px;padding:1rem 1.1rem}
+.fbox-title{font-size:10px;font-weight:600;color:var(--muted);letter-spacing:.8px;text-transform:uppercase;margin-bottom:.7rem;font-family:var(--mono)}
+.fmath{font-family:var(--mono);font-size:12px;line-height:2;color:var(--text)}
+.fmath .var{color:var(--teal);font-weight:500}
+.fmath .cmt{color:var(--light);font-size:10.5px}
+.fmath .mat{color:var(--blue);font-weight:500}
+.fmath .frac{display:inline-flex;flex-direction:column;vertical-align:middle;text-align:center;margin:0 3px;font-size:11px;line-height:1.4}
+.fmath .frac .fn{border-bottom:1px solid var(--text);padding:0 3px}
+.fmath .frac .fd{padding:0 3px}
+.mat-box{display:inline-grid;grid-template-columns:1fr 1fr;gap:1px 12px;vertical-align:middle;margin:0 4px;padding:4px 8px;border-left:2px solid var(--blue);border-right:2px solid var(--blue);font-size:11px;line-height:1.8;background:var(--blue-bg);border-radius:0 4px 4px 0}
+.def-tbl{width:100%;font-size:11.5px;border-collapse:collapse}
+.def-tbl td{padding:4px 6px;border-bottom:1px solid var(--border);vertical-align:top}
+.def-tbl tr:last-child td{border-bottom:none}
+.def-tbl td:first-child{font-family:var(--mono);font-weight:500;color:var(--teal);width:80px;white-space:nowrap}
+.def-tbl td:last-child{color:var(--muted)}
+.callout{background:var(--teal-bg);border:1px solid var(--teal-bd);border-radius:6px;padding:.65rem .9rem;font-size:12px;color:var(--text);line-height:1.6;margin-top:.7rem}
+.callout b{color:var(--teal)}
+
+/* ══ SECTION 3: SIMULATOR ══ */
+.sim-layout{display:grid;grid-template-columns:210px 1fr;gap:0}
+@media(max-width:800px){.sim-layout{grid-template-columns:1fr}}
+.sim-sidebar{border-right:1px solid var(--border);padding:1.1rem;display:flex;flex-direction:column;gap:1rem}
+.sim-main{padding:1.1rem;display:flex;flex-direction:column;gap:1rem;min-width:0}
+
+.slbl{font-size:10px;font-weight:600;color:var(--muted);letter-spacing:.8px;text-transform:uppercase;margin-bottom:.55rem;font-family:var(--mono)}
+.srow{margin-bottom:9px}
+.stop{display:flex;justify-content:space-between;margin-bottom:3px}
+.sname{font-size:12px;color:var(--muted)}
+.sval{font-family:var(--mono);font-size:12px;color:var(--teal);font-weight:500}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:3px;background:var(--border);border-radius:2px;outline:none;cursor:pointer}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;border-radius:50%;background:var(--teal);border:2px solid #fff;box-shadow:0 0 0 1px var(--teal-bd);cursor:pointer;transition:transform .1s}
+input[type=range]:hover::-webkit-slider-thumb{transform:scale(1.2)}
+
+.preset-list{display:flex;flex-direction:column;gap:5px}
+.pb{padding:6px 9px;border:1px solid var(--border);background:transparent;color:var(--muted);border-radius:6px;cursor:pointer;font-family:var(--mono);font-size:10px;text-align:left;line-height:1.4;transition:all .12s;width:100%}
+.pb:hover{border-color:var(--teal);color:var(--text);background:var(--teal-bg)}
+.pb.on{border-color:var(--teal);color:var(--teal);background:var(--teal-bg)}
+.pb .pm{display:block;font-size:10.5px}
+.pb .pw{font-size:9.5px;color:var(--light)}
+.pb.on .pw{color:var(--teal);opacity:.7}
+
+.info-row{background:var(--surf);border-radius:5px;padding:6px 10px;margin-bottom:5px}
+.ir-label{font-size:10px;color:var(--muted);font-family:var(--mono)}
+.ir-val{font-family:var(--mono);font-size:11.5px;color:var(--text);font-weight:500}
+
+.stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+@media(max-width:600px){.stat-row{grid-template-columns:repeat(2,1fr)}}
+.stat{background:var(--surf);border-radius:7px;padding:9px 11px;border-left:3px solid var(--acc,var(--teal))}
+.stat .sl{font-size:9px;color:var(--muted);font-family:var(--mono);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}
+.stat .sv{font-family:var(--mono);font-size:15px;font-weight:600;color:var(--text)}
+.stat .sv.good{color:var(--teal)}.stat .sv.warn{color:var(--amber)}.stat .sv.bad{color:var(--red)}
+
+.diagram-card{background:var(--surf);border-radius:8px;padding:.9rem}
+.dc-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:.65rem;flex-wrap:wrap;gap:.5rem}
+.dc-title{font-size:10px;font-weight:600;color:var(--muted);letter-spacing:.8px;text-transform:uppercase;font-family:var(--mono)}
+.dc-sel{font-family:var(--mono);font-size:11px;color:var(--teal)}
+.field-legend{display:flex;gap:12px;flex-wrap:wrap;margin-top:7px}
+.fl{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted)}
+.fl-sw{width:18px;height:3px;border-radius:2px}
+
+.chart-card{background:var(--surf);border-radius:8px;padding:.9rem}
+.cc-title{font-size:10px;font-weight:600;color:var(--muted);letter-spacing:.8px;text-transform:uppercase;font-family:var(--mono);margin-bottom:.6rem}
+.cwrap{position:relative}
+
+.tt{position:absolute;pointer-events:none;background:var(--white);border:1px solid var(--border2);border-radius:7px;padding:8px 12px;font-family:var(--mono);font-size:11px;color:var(--text);line-height:1.8;z-index:20;min-width:145px;display:none;box-shadow:0 4px 14px rgba(0,0,0,.1)}
+.tt.show{display:block}
+.tt-row{display:flex;justify-content:space-between;gap:14px}
+.tt-row span:first-child{color:var(--muted)}
+.tt-row span:last-child{color:var(--teal);font-weight:500}
+
+.info-banner{background:var(--teal-bg);border:1px solid var(--teal-bd);border-radius:7px;padding:.7rem 1rem;font-size:12.5px;color:var(--text);line-height:1.65}
+.info-banner .good{color:var(--teal);font-weight:500}
+.info-banner .bad{color:var(--red);font-weight:500}
+
+/* location-in-device banner */
+.loc-banner{display:flex;align-items:center;gap:1rem;background:var(--blue-bg);border:1px solid #bfdbfe;border-radius:7px;padding:.65rem 1rem;margin-bottom:.75rem;flex-wrap:wrap}
+.loc-text{font-size:12px;color:var(--blue);line-height:1.5;flex:1}
+.loc-text b{font-weight:600}
+
+/* standing wave note */
+.sw-note{display:flex;align-items:flex-start;gap:8px;background:#fff7ed;border:1px solid #fed7aa;border-radius:6px;padding:.6rem .9rem;font-size:12px;color:#92400e;line-height:1.55;margin-top:.6rem}
+.sw-note b{font-weight:600}
+
+/* how-we-get note */
+.howwe{background:var(--surf);border:1px solid var(--border);border-radius:6px;padding:.6rem 1rem;font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:.5rem}
+.howwe b{color:var(--text)}
+
+/* formula highlight box */
+.fbox-highlight{background:#fef3c7;border:1.5px solid #f59e0b;border-radius:8px;padding:1rem 1.1rem}
+.fbox-highlight .fbox-title{color:#92400e}
+
+/* Q&A accordion */
+.qa-list{display:flex;flex-direction:column;gap:6px}
+.qa-item{border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.qa-q{padding:.8rem 1rem;display:flex;align-items:flex-start;gap:.75rem;cursor:pointer;background:var(--white);transition:background .12s;user-select:none}
+.qa-q:hover{background:var(--surf)}
+.qa-tag{font-family:var(--mono);font-size:9px;color:var(--teal);background:var(--teal-bg);border:1px solid var(--teal-bd);padding:2px 7px;border-radius:10px;white-space:nowrap;flex-shrink:0;margin-top:2px}
+.qa-qtxt{font-size:13px;font-weight:500;flex:1}
+.qa-chevron{width:14px;height:14px;flex-shrink:0;margin-top:2px;transition:transform .2s;color:var(--light)}
+.qa-chevron path{stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.qa-item.open .qa-chevron{transform:rotate(180deg)}
+.qa-a{padding:0 1rem;max-height:0;overflow:hidden;transition:max-height .3s ease,padding .3s ease;background:var(--surf);font-size:13px;color:var(--muted);line-height:1.7}
+.qa-item.open .qa-a{padding:.85rem 1rem;max-height:600px}
+.qa-a b{color:var(--text)}
+.qa-a code{font-family:var(--mono);font-size:11.5px;background:var(--white);border:1px solid var(--border);padding:1px 5px;border-radius:3px;color:var(--teal)}
+.qa-a .formula-line{font-family:var(--mono);font-size:12px;background:var(--white);border:1px solid var(--border);border-radius:5px;padding:6px 10px;margin:.4rem 0;color:var(--text);display:block}
+
+/* photon animation */
+@keyframes photon-travel{
+  0%  {transform:translateX(0);opacity:.9}
+  28% {transform:translateX(-200px);opacity:1}
+  30% {transform:translateX(-195px);opacity:.4}
+  32% {transform:translateX(-200px);opacity:1}
+  50% {transform:translateX(0);opacity:.9}
+  78% {transform:translateX(200px);opacity:1}
+  80% {transform:translateX(195px);opacity:.4}
+  82% {transform:translateX(200px);opacity:1}
+  100%{transform:translateX(0);opacity:.9}
+}
+@keyframes dbr-flash{
+  0%,100%{opacity:0}
+  28%,32%,78%,82%{opacity:1}
+  30%,80%{opacity:0}
+}
+.photon-dot{animation:photon-travel 3s ease-in-out infinite}
+.dbr-flash-l{animation:dbr-flash 3s ease-in-out infinite}
+.dbr-flash-r{animation:dbr-flash 3s ease-in-out infinite;animation-delay:.01s}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hlogo">DBR</div>
+  <div>
+    <div class="htitle">DBR Simulator</div>
+    <div class="hsub">Transfer Matrix Method · GaAs/AlAs · Normal incidence</div>
+  </div>
+  <div class="hpill" id="hpill">GaAs/AlAs · λ₀ = 980 nm</div>
+</header>
+
+<div class="page">
+
+<!-- ══ SECTION 1: DEVICE ══ -->
+<div class="section" id="s1">
+  <div class="sec-hd" onclick="toggleSection('s1')">
+    <div class="sec-num">1</div>
+    <div class="sec-title">What is a DBR laser?</div>
+    <div class="sec-badge">device overview</div>
+    <svg class="chevron" viewBox="0 0 16 16"><path d="M4 6l4 4 4-4"/></svg>
+  </div>
+  <div class="sec-body" id="s1-body">
+    <div class="device-wrap">
+      <div class="device-svg-wrap">
+        <svg viewBox="0 0 600 190" style="width:100%;max-width:620px;display:block">
+          <rect x="10" y="15" width="580" height="155" fill="#f8fafc" stroke="#374151" stroke-width="1.8" rx="2"/>
+          <!-- DBR regions -->
+          <rect x="10" y="15" width="148" height="155" fill="#dbeafe" rx="0"/>
+          <rect x="442" y="15" width="148" height="155" fill="#dbeafe" rx="0"/>
+          <!-- Active region halves -->
+          <rect x="158" y="15" width="284" height="72" fill="#fef9c3" opacity=".55"/>
+          <rect x="158" y="87" width="284" height="83" fill="#dcfce7" opacity=".45"/>
+          <!-- Quantum well strip — clickable -->
+          <rect id="qw-target" x="158" y="84" width="284" height="9" fill="#475569" rx="1" style="cursor:pointer"/>
+          <rect id="qw-hover" x="158" y="84" width="284" height="9" fill="rgba(59,130,246,0)" rx="1" style="cursor:pointer;transition:fill .15s"/>
+          <!-- Dashed dividers -->
+          <line x1="158" y1="15" x2="158" y2="170" stroke="#374151" stroke-width="1.2" stroke-dasharray="5,4"/>
+          <line x1="442" y1="15" x2="442" y2="170" stroke="#374151" stroke-width="1.2" stroke-dasharray="5,4"/>
+          <!-- DBR wavy lines left -->
+          <path d="M28,90 Q40,79 52,90 Q64,101 76,90 Q88,79 100,90 Q112,101 124,90 Q136,79 148,90" stroke="#1d4ed8" stroke-width="2" fill="none"/>
+          <!-- DBR wavy lines right -->
+          <path d="M452,90 Q464,79 476,90 Q488,101 500,90 Q512,79 524,90 Q536,101 548,90 Q560,79 572,90" stroke="#1d4ed8" stroke-width="2" fill="none"/>
+          <!-- Labels -->
+          <text x="84" y="97" text-anchor="middle" font-family="Inter" font-size="13" font-weight="600" fill="#1d4ed8">DBR</text>
+          <text x="84" y="112" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#3b82f6">mirror</text>
+          <text x="300" y="62" text-anchor="middle" font-family="Inter" font-size="12" font-weight="500" fill="#92400e">p-TYPE</text>
+          <text x="300" y="148" text-anchor="middle" font-family="Inter" font-size="12" font-weight="500" fill="#14532d">n-TYPE</text>
+          <text x="300" y="91" text-anchor="middle" font-family="JetBrains Mono" font-size="8.5" fill="#fff">quantum well (active) — click to explore</text>
+          <text x="516" y="97" text-anchor="middle" font-family="Inter" font-size="13" font-weight="600" fill="#1d4ed8">DBR</text>
+          <text x="516" y="112" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#3b82f6">mirror</text>
+          <!-- Photon bounce animation — travels along QW/waveguide axis -->
+          <g style="transform-origin:300px 88px">
+            <circle class="photon-dot" cx="300" cy="88" r="5" fill="#fbbf24" opacity=".9"/>
+            <text class="photon-dot" x="308" y="85" font-family="JetBrains Mono" font-size="8" fill="#fbbf24" opacity=".9">hν</text>
+          </g>
+          <circle class="dbr-flash-l" cx="155" cy="88" r="14" fill="rgba(251,191,36,0.25)"/>
+          <circle class="dbr-flash-r" cx="445" cy="88" r="14" fill="rgba(251,191,36,0.25)"/>
+          <!-- Arrows -->
+          <defs>
+            <marker id="ar" markerWidth="6" markerHeight="5" refX="5" refY="2.5" orient="auto"><polygon points="0 0,6 2.5,0 5" fill="#0d9488"/></marker>
+            <marker id="al" markerWidth="6" markerHeight="5" refX="1" refY="2.5" orient="auto-start-reverse"><polygon points="6 0,0 2.5,6 5" fill="#0d9488"/></marker>
+          </defs>
+          <line x1="158" y1="88" x2="20" y2="88" stroke="#0d9488" stroke-width="1.5" marker-end="url(#al)"/>
+          <line x1="442" y1="88" x2="580" y2="88" stroke="#0d9488" stroke-width="1.5" marker-end="url(#ar)"/>
+          <text x="89" y="82" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#0d9488">output light</text>
+          <text x="511" y="82" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#0d9488">output light</text>
+          <!-- Pumped region label -->
+          <line x1="163" y1="180" x2="437" y2="180" stroke="#6b7280" stroke-width="1"/>
+          <polygon points="163,177 158,183 168,183" fill="#6b7280"/>
+          <polygon points="437,177 432,183 442,183" fill="#6b7280"/>
+          <text x="300" y="189" text-anchor="middle" font-family="Inter" font-size="10" fill="#6b7280">PUMPED REGION (current injection)</text>
+          <!-- DBR LASER title -->
+          <text x="300" y="10" text-anchor="middle" font-family="Inter" font-size="11" font-weight="600" fill="#374151">DBR LASER</text>
+        </svg>
+        <div style="font-size:11px;color:var(--muted);margin-top:6px;font-family:var(--mono)">
+          The yellow dot = photon bouncing between the two DBR mirrors, building up to lase.
+        </div>
+      </div>
+      <div class="device-legend">
+        <div class="dl"><div class="dl-dot" style="background:#1d4ed8"></div><div><div class="dl-name">DBR mirrors</div><div class="dl-desc">Stacks of alternating high/low refractive index layers. Each pair partially reflects light; together they reach R ≥ 99%.</div></div></div>
+        <div class="dl"><div class="dl-dot" style="background:#475569"></div><div><div class="dl-name">Quantum well <span style="color:var(--blue);font-size:10px">(click to explore →)</span></div><div class="dl-desc">Ultra-thin GaAs layer (~10 nm). Electrons and holes are confined here and recombine to emit photons.</div></div></div>
+        <div class="dl"><div class="dl-dot" style="background:#0d9488"></div><div><div class="dl-name">Laser output</div><div class="dl-desc">Photons bounce between the two DBR mirrors (the cavity), amplified each pass, until stimulated emission builds up and lases.</div></div></div>
+        <div class="dl" style="margin-top:14px"><div class="dl-dot" style="background:#fbbf24"></div><div><div class="dl-name">Animated photon (hν)</div><div class="dl-desc">Yellow dot shows a photon emitted from the QW reflecting off each DBR mirror. The flashes at the DBR walls show the reflection events.</div></div></div>
+      </div>
+    </div>
+
+    <!-- QW DETAIL PANEL -->
+    <div class="qw-panel" id="qw-panel">
+      <div class="qw-panel-header">
+        <div class="qw-panel-title">Quantum Well — heterostructure &amp; photon emission</div>
+        <button class="qw-close" onclick="closeQW()">×</button>
+      </div>
+      <div class="qw-inner">
+        <div>
+          <div class="qw-sec-label">Physical cross-section</div>
+          <svg viewBox="0 0 340 140" style="width:100%;display:block">
+            <!-- AlGaAs barrier left -->
+            <rect x="0" y="10" width="130" height="110" fill="#dbeafe" stroke="#93c5fd" stroke-width="1"/>
+            <text x="65" y="55" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#1d4ed8">AlGaAs</text>
+            <text x="65" y="70" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#3b82f6">Barrier</text>
+            <text x="65" y="84" text-anchor="middle" font-family="JetBrains Mono" font-size="8.5" fill="#64748b">n = 3.40</text>
+            <text x="65" y="97" text-anchor="middle" font-family="JetBrains Mono" font-size="8.5" fill="#64748b">E_g = 1.9 eV</text>
+            <!-- GaAs QW center -->
+            <rect x="130" y="10" width="80" height="110" fill="#bfdbfe" stroke="#3b82f6" stroke-width="1.5"/>
+            <text x="170" y="55" text-anchor="middle" font-family="JetBrains Mono" font-size="10" font-weight="500" fill="#1d4ed8">GaAs</text>
+            <text x="170" y="69" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#1d4ed8">QW</text>
+            <text x="170" y="83" text-anchor="middle" font-family="JetBrains Mono" font-size="8.5" fill="#374151">n = 3.59</text>
+            <text x="170" y="97" text-anchor="middle" font-family="JetBrains Mono" font-size="8.5" fill="#374151">E_g = 1.42 eV</text>
+            <text x="170" y="111" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#64748b">L_z ≈ 10 nm</text>
+            <!-- AlGaAs barrier right -->
+            <rect x="210" y="10" width="130" height="110" fill="#dbeafe" stroke="#93c5fd" stroke-width="1"/>
+            <text x="275" y="55" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#1d4ed8">AlGaAs</text>
+            <text x="275" y="70" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#3b82f6">Barrier</text>
+            <text x="275" y="84" text-anchor="middle" font-family="JetBrains Mono" font-size="8.5" fill="#64748b">n = 3.40</text>
+            <text x="275" y="97" text-anchor="middle" font-family="JetBrains Mono" font-size="8.5" fill="#64748b">E_g = 1.9 eV</text>
+            <!-- Width arrow -->
+            <line x1="130" y1="128" x2="210" y2="128" stroke="#374151" stroke-width="1"/>
+            <polygon points="130,125 124,131 136,131" fill="#374151"/>
+            <polygon points="210,125 204,131 216,131" fill="#374151"/>
+            <text x="170" y="138" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#374151">L_z ~ 10 nm</text>
+          </svg>
+          <div class="qw-caption">The GaAs well is sandwiched between wider-bandgap AlGaAs barriers. Electrons and holes are <b>quantum-confined</b> in the well, raising their ground state energies above the band edge.</div>
+        </div>
+        <div>
+          <div class="qw-sec-label">Band diagram + photon emission</div>
+          <svg id="qw-band-svg" viewBox="0 0 340 210" style="width:100%;display:block">
+            <!-- Ec profile -->
+            <path d="M0,30 L120,30 L120,65 L220,65 L220,30 L340,30" stroke="#1d4ed8" stroke-width="2.5" fill="none"/>
+            <!-- Ev profile -->
+            <path d="M0,165 L120,165 L120,130 L220,130 L220,165 L340,165" stroke="#7c3aed" stroke-width="2.5" fill="none"/>
+            <!-- QW fill shading -->
+            <rect x="120" y="65" width="100" height="65" fill="rgba(59,130,246,0.07)"/>
+            <!-- Quantized levels E1c, E1v -->
+            <line x1="120" y1="78" x2="220" y2="78" stroke="#1d4ed8" stroke-width="1.5" stroke-dasharray="5,3"/>
+            <line x1="120" y1="117" x2="220" y2="117" stroke="#7c3aed" stroke-width="1.5" stroke-dasharray="5,3"/>
+            <text x="224" y="82" font-family="JetBrains Mono" font-size="9" fill="#1d4ed8">E₁c</text>
+            <text x="224" y="121" font-family="JetBrains Mono" font-size="9" fill="#7c3aed">E₁v</text>
+            <!-- Ec / Ev labels -->
+            <text x="2" y="27" font-family="JetBrains Mono" font-size="9" fill="#1d4ed8">Ec</text>
+            <text x="2" y="162" font-family="JetBrains Mono" font-size="9" fill="#7c3aed">Ev</text>
+            <!-- Electron (blue dot) at E1c -->
+            <circle cx="170" cy="78" r="6" fill="#1d4ed8"/>
+            <text x="180" y="74" font-family="JetBrains Mono" font-size="8" fill="#1d4ed8">e⁻</text>
+            <!-- Hole (open circle) at E1v -->
+            <circle cx="170" cy="117" r="6" fill="#fff" stroke="#7c3aed" stroke-width="1.8"/>
+            <text x="180" y="121" font-family="JetBrains Mono" font-size="8" fill="#7c3aed">h⁺</text>
+            <!-- Photon emission arrow with animation -->
+            <line x1="170" y1="86" x2="170" y2="109" stroke="#f59e0b" stroke-width="2.5" marker-end="url(#ph-arr)"/>
+            <defs><marker id="ph-arr" markerWidth="6" markerHeight="5" refX="5" refY="2.5" orient="auto"><polygon points="0 0,6 2.5,0 5" fill="#f59e0b"/></marker></defs>
+            <!-- Wavy photon symbol -->
+            <path d="M182,95 Q186,90 190,95 Q194,100 198,95 Q202,90 206,95" stroke="#f59e0b" stroke-width="1.8" fill="none"/>
+            <text x="210" y="99" font-family="JetBrains Mono" font-size="10" fill="#f59e0b" font-weight="500">hν</text>
+            <!-- Delta E annotation -->
+            <line x1="105" y1="78" x2="105" y2="117" stroke="#94a3b8" stroke-width="1"/>
+            <polygon points="102,78 108,78 105,73" fill="#94a3b8"/>
+            <polygon points="102,117 108,117 105,122" fill="#94a3b8"/>
+            <text x="50" y="101" text-anchor="middle" font-family="JetBrains Mono" font-size="8.5" fill="#64748b">ΔE =</text>
+            <text x="50" y="112" text-anchor="middle" font-family="JetBrains Mono" font-size="8.5" fill="#64748b">E₁c − E₁v</text>
+            <!-- hν caption -->
+            <text x="170" y="175" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#f59e0b">hν = E₁c − E₁v ≈ 1.49 eV</text>
+            <text x="170" y="188" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#94a3b8">→ λ ≈ 833 nm (GaAs QW)</text>
+            <!-- Region labels -->
+            <text x="60" y="200" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">AlGaAs</text>
+            <text x="170" y="200" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#64748b">GaAs QW</text>
+            <text x="280" y="200" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">AlGaAs</text>
+            <!-- Vertical dividers -->
+            <line x1="120" y1="20" x2="120" y2="170" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="4,3"/>
+            <line x1="220" y1="20" x2="220" y2="170" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="4,3"/>
+          </svg>
+          <div class="qw-caption">
+            Electrons (blue) occupy the quantized subband E₁c; holes (open circle) occupy E₁v. When they <b>recombine</b>, a photon is emitted with energy hν = E₁c − E₁v. This photon then <b>bounces between the two DBR mirrors</b>, gaining stimulated emission gain on each pass until the round-trip gain exceeds loss → lasing.
+          </div>
+        </div>
+      </div>
+      <!-- Reflection animation -->
+      <div style="padding:0 1.25rem 1.25rem">
+        <div class="qw-sec-label">How the emitted photon is reflected by the DBR</div>
+        <svg viewBox="0 0 600 90" style="width:100%;max-width:600px;display:block;background:var(--white);border-radius:6px;border:1px solid var(--border)">
+          <!-- DBR left layers (simplified stack) -->
+          <rect x="10" y="15" width="140" height="60" fill="#dbeafe"/>
+          <text x="80" y="50" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#1d4ed8">DBR mirror</text>
+          <text x="80" y="62" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#3b82f6">(N periods)</text>
+          <!-- Alternating layer stripes in DBR -->
+          <rect x="10" y="15" width="14" height="60" fill="#93c5fd" opacity=".6"/>
+          <rect x="24" y="15" width="14" height="60" fill="#dbeafe" opacity=".6"/>
+          <rect x="38" y="15" width="14" height="60" fill="#93c5fd" opacity=".6"/>
+          <rect x="52" y="15" width="14" height="60" fill="#dbeafe" opacity=".6"/>
+          <rect x="66" y="15" width="14" height="60" fill="#93c5fd" opacity=".6"/>
+          <rect x="80" y="15" width="14" height="60" fill="#dbeafe" opacity=".6"/>
+          <rect x="94" y="15" width="14" height="60" fill="#93c5fd" opacity=".6"/>
+          <rect x="108" y="15" width="14" height="60" fill="#dbeafe" opacity=".6"/>
+          <rect x="122" y="15" width="14" height="60" fill="#93c5fd" opacity=".6"/>
+          <rect x="136" y="15" width="14" height="60" fill="#dbeafe" opacity=".6"/>
+          <!-- Active region center -->
+          <rect x="150" y="15" width="300" height="60" fill="#f0fdf4"/>
+          <text x="300" y="42" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#15803d">Active region</text>
+          <text x="300" y="56" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#86efac">(quantum well)</text>
+          <!-- DBR right layers -->
+          <rect x="450" y="15" width="140" height="60" fill="#dbeafe"/>
+          <text x="520" y="50" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#1d4ed8">DBR mirror</text>
+          <text x="520" y="62" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#3b82f6">(N periods)</text>
+          <rect x="450" y="15" width="14" height="60" fill="#93c5fd" opacity=".6"/>
+          <rect x="464" y="15" width="14" height="60" fill="#dbeafe" opacity=".6"/>
+          <rect x="478" y="15" width="14" height="60" fill="#93c5fd" opacity=".6"/>
+          <rect x="492" y="15" width="14" height="60" fill="#dbeafe" opacity=".6"/>
+          <rect x="506" y="15" width="14" height="60" fill="#93c5fd" opacity=".6"/>
+          <rect x="520" y="15" width="14" height="60" fill="#dbeafe" opacity=".6"/>
+          <rect x="534" y="15" width="14" height="60" fill="#93c5fd" opacity=".6"/>
+          <rect x="548" y="15" width="14" height="60" fill="#dbeafe" opacity=".6"/>
+          <rect x="562" y="15" width="14" height="60" fill="#93c5fd" opacity=".6"/>
+          <rect x="576" y="15" width="14" height="60" fill="#dbeafe" opacity=".6"/>
+          <!-- Animated photon -->
+          <g style="transform-origin:300px 45px">
+            <circle class="photon-dot" cx="300" cy="45" r="5" fill="#fbbf24"/>
+            <text class="photon-dot" x="308" y="42" font-family="JetBrains Mono" font-size="8" fill="#fbbf24">hν</text>
+          </g>
+          <circle class="dbr-flash-l" cx="150" cy="45" r="12" fill="rgba(251,191,36,0.3)"/>
+          <circle class="dbr-flash-r" cx="450" cy="45" r="12" fill="rgba(251,191,36,0.3)"/>
+          <!-- R label -->
+          <text x="80" y="10" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#0d9488">R ≥ 99% →</text>
+          <text x="520" y="10" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#0d9488">← R ≥ 99%</text>
+        </svg>
+        <div class="qw-caption" style="margin-top:.5rem">
+          The photon emitted from the QW hits the DBR stack. Each layer interface partially reflects the wave. Because every layer is <b>λ₀/4n thick</b> (quarter-wave), all partial reflections arrive back in phase — they add constructively, achieving R ≥ 99%.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SECTION 2: FORMULA (collapsed by default) ══ -->
+<div class="section collapsed" id="s2">
+  <div class="sec-hd" onclick="toggleSection('s2')">
+    <div class="sec-num">2</div>
+    <div class="sec-title">Formula: how R(λ) is computed</div>
+    <div class="sec-badge">TMM equations — click to expand</div>
+    <svg class="chevron" viewBox="0 0 16 16"><path d="M4 6l4 4 4-4"/></svg>
+  </div>
+  <div class="sec-body" id="s2-body" style="max-height:0">
+    <div class="formula-grid">
+      <div class="fbox">
+        <div class="fbox-title">Variables — what n_H and n_L mean</div>
+        <table class="def-tbl">
+          <tr><td>n_H</td><td><b>High</b> refractive index layer (e.g. GaAs, 3.59). Thinner thickness for same phase shift.</td></tr>
+          <tr><td>n_L</td><td><b>Low</b> refractive index layer (e.g. AlAs, 2.94). Optically sparse.</td></tr>
+          <tr><td>d_H</td><td>λ₀ / (4·n_H) &nbsp;← quarter-wave thickness</td></tr>
+          <tr><td>d_L</td><td>λ₀ / (4·n_L)</td></tr>
+          <tr><td>N</td><td>Number of H/L pairs. More periods → higher R.</td></tr>
+          <tr><td>n₀</td><td>Refractive index of incident medium (air = 1.0)</td></tr>
+          <tr><td>n_S</td><td>Substrate refractive index</td></tr>
+        </table>
+        <div class="callout"><b>Why quarter-wave?</b> d = λ₀/4n gives phase δ = π/2. All partial reflections from each interface add up in phase → constructive interference → R → 100%.</div>
+      </div>
+      <div class="fbox">
+        <div class="fbox-title">Transfer matrix for one layer M_j</div>
+        <div class="fmath">
+          <span class="mat">M</span><sub>j</sub> <span style="color:var(--muted)">=</span>
+          <span class="mat-box">
+            <span>cos δ<sub>j</sub></span>
+            <span style="color:var(--blue)">(i/n<sub>j</sub>) sin δ<sub>j</sub></span>
+            <span style="color:var(--blue)">i·n<sub>j</sub> sin δ<sub>j</sub></span>
+            <span>cos δ<sub>j</sub></span>
+          </span><br>
+          <span class="var">δ<sub>j</sub></span> = <span style="color:var(--blue)">2π · n<sub>j</sub> · d<sub>j</sub></span> / <span class="var">λ</span>
+          <span class="cmt">&nbsp;← phase thickness</span><br>
+          <span class="cmt">At quarter-wave: δ = π/2 → cos δ = 0, sin δ = 1</span>
+        </div>
+      </div>
+      <div class="fbox">
+        <div class="fbox-title">System matrix (N periods)</div>
+        <div class="fmath">
+          <span class="mat">M</span><sub>total</sub> = <span style="color:var(--muted)">(</span><span class="mat">M</span><sub>H</sub> · <span class="mat">M</span><sub>L</sub><span style="color:var(--muted)">)</span><sup><span class="var">N</span></sup><br>
+          <span class="cmt">Multiply 2×2 matrices N times</span><br>
+          <span class="cmt">→ get M₁₁, M₁₂, M₂₁, M₂₂ (complex)</span>
+        </div>
+      </div>
+      <div class="fbox">
+        <div class="fbox-title">Reflectance R(λ) — the graph</div>
+        <div class="fmath">
+          <span class="var">r</span> =
+          <span class="frac">
+            <span class="fn">n₀M₁₁ + n₀n<sub>s</sub>M₁₂ − M₂₁ − n<sub>s</sub>M₂₂</span>
+            <span class="fd">n₀M₁₁ + n₀n<sub>s</sub>M₁₂ + M₂₁ + n<sub>s</sub>M₂₂</span>
+          </span><br>
+          <span class="var">R</span>(<span class="var">λ</span>) = |<span class="var">r</span>|²
+          <span class="cmt">&nbsp;← plotted in section 3</span>
+        </div>
+        <div class="callout">Repeat for each λ in the sweep. The flat region around λ₀ is the <b>stopband</b> — the high-reflectance window of the DBR mirror.</div>
+      </div>
+    </div>
+
+    <div style="margin-top:1rem;display:grid;grid-template-columns:1fr 1fr;gap:1rem">
+      <div class="fbox fbox-highlight">
+        <div class="fbox-title">Closed-form peak R formula (at exactly λ₀)</div>
+        <div class="fmath">
+          <span class="var">R</span><sub>peak</sub> =
+          <span class="frac">
+            <span class="fn" style="color:#92400e">n<sub>S</sub>·(n<sub>H</sub>/n<sub>L</sub>)<sup>2N</sup> − n<sub>0</sub></span>
+            <span class="fd" style="color:#92400e">n<sub>S</sub>·(n<sub>H</sub>/n<sub>L</sub>)<sup>2N</sup> + n<sub>0</sub></span>
+          </span>
+          <sup>2</sup>
+        </div>
+        <div class="callout" style="background:#fff7ed;border-color:#fed7aa;margin-top:.7rem">
+          <b style="color:#92400e">Verify:</b> GaAs/AlAs, N=12 → (3.59/2.94)²⁴ × 3.59 ≈ 433 → R = ((433−1)/(433+1))² ≈ <b style="color:#0d9488">99.1%</b>. Matches the TMM graph exactly.
+        </div>
+      </div>
+      <div class="fbox fbox-highlight">
+        <div class="fbox-title">Stopband width formula (analytical)</div>
+        <div class="fmath">
+          <span class="frac">
+            <span class="fn" style="color:#92400e">Δλ</span>
+            <span class="fd" style="color:#92400e">λ<sub>0</sub></span>
+          </span>
+          =
+          <span class="frac">
+            <span class="fn" style="color:#92400e">4</span>
+            <span class="fd" style="color:#92400e">π</span>
+          </span>
+          · arcsin
+          <span style="color:#92400e">(</span>
+          <span class="frac">
+            <span class="fn" style="color:#92400e">n<sub>H</sub> − n<sub>L</sub></span>
+            <span class="fd" style="color:#92400e">n<sub>H</sub> + n<sub>L</sub></span>
+          </span>
+          <span style="color:#92400e">)</span>
+        </div>
+        <div class="callout" style="background:#fff7ed;border-color:#fed7aa;margin-top:.7rem">
+          Depends <b style="color:#92400e">only on index contrast</b>, not on N. GaAs/AlAs → Δλ ≈ <b style="color:#0d9488">97 nm</b>. To widen the stopband: use higher-contrast materials (e.g. Si/SiO₂ gives ~400 nm stopband).
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SECTION 3: SIMULATOR ══ -->
+<div class="section" id="s3">
+  <div class="sec-hd" onclick="toggleSection('s3')">
+    <div class="sec-num">3</div>
+    <div class="sec-title">Interactive simulator</div>
+    <div class="sec-badge">adjust parameters → live update</div>
+    <svg class="chevron" viewBox="0 0 16 16"><path d="M4 6l4 4 4-4"/></svg>
+  </div>
+  <div class="sec-body" id="s3-body">
+    <div class="sim-layout">
+      <div class="sim-sidebar">
+        <div>
+          <div class="slbl">Presets</div>
+          <div class="preset-list" id="plist"></div>
+        </div>
+        <div>
+          <div class="slbl">Parameters</div>
+          <div class="srow"><div class="stop"><span class="sname">Periods N</span><span class="sval" id="vN">12</span></div><input type="range" id="sN" min="1" max="30" step="1" value="12"></div>
+          <div class="srow"><div class="stop"><span class="sname">n_H (high index)</span><span class="sval" id="vH">3.59</span></div><input type="range" id="sH" min="1.5" max="4.5" step="0.01" value="3.59"></div>
+          <div class="srow"><div class="stop"><span class="sname">n_L (low index)</span><span class="sval" id="vL">2.94</span></div><input type="range" id="sL" min="1.0" max="4.5" step="0.01" value="2.94"></div>
+          <div class="srow"><div class="stop"><span class="sname">λ₀ center (nm)</span><span class="sval" id="vW">980</span></div><input type="range" id="sW" min="400" max="2000" step="10" value="980"></div>
+          <div class="srow"><div class="stop"><span class="sname">n₀ incident</span><span class="sval" id="vN0">1.00</span></div><input type="range" id="sN0" min="1.0" max="4.0" step="0.01" value="1.0"></div>
+          <div class="srow"><div class="stop"><span class="sname">n_S substrate</span><span class="sval" id="vNS">3.59</span></div><input type="range" id="sNS" min="1.0" max="4.5" step="0.01" value="3.59"></div>
+        </div>
+        <div>
+          <div class="slbl">Layer dimensions</div>
+          <div class="info-row"><div class="ir-label">d_H = λ₀/4n_H</div><div class="ir-val" id="dH">—</div></div>
+          <div class="info-row"><div class="ir-label">d_L = λ₀/4n_L</div><div class="ir-val" id="dL">—</div></div>
+          <div class="info-row"><div class="ir-label">Total stack</div><div class="ir-val" id="dTot">—</div></div>
+        </div>
+      </div>
+      <div class="sim-main">
+        <div class="stat-row">
+          <div class="stat" style="--acc:var(--teal)"><div class="sl">PEAK R</div><div class="sv" id="spR">—</div></div>
+          <div class="stat" style="--acc:var(--purple)"><div class="sl">STOPBAND</div><div class="sv" id="spS">—</div></div>
+          <div class="stat" style="--acc:var(--blue)"><div class="sl">n_H / n_L</div><div class="sv" id="spC">—</div></div>
+          <div class="stat" style="--acc:var(--amber)"><div class="sl">LAYERS</div><div class="sv" id="spN">—</div></div>
+        </div>
+        <div class="diagram-card">
+          <div class="loc-banner">
+            <svg viewBox="0 0 120 36" style="width:120px;height:36px;flex-shrink:0">
+              <rect x="1" y="1" width="118" height="34" fill="#f8fafc" stroke="#374151" stroke-width="1" rx="1"/>
+              <rect x="1" y="1" width="30" height="34" fill="#dbeafe"/>
+              <rect x="89" y="1" width="30" height="34" fill="#dbeafe"/>
+              <path d="M6,18 Q12,13 18,18 Q24,23 30,18" stroke="#1d4ed8" stroke-width="1.2" fill="none"/>
+              <path d="M90,18 Q96,13 102,18 Q108,23 114,18" stroke="#1d4ed8" stroke-width="1.2" fill="none"/>
+              <rect x="31" y="16" width="58" height="4" fill="#475569" rx="1"/>
+              <rect x="31" y="1" width="58" height="15" fill="#fef9c3" opacity=".6"/>
+              <rect x="31" y="20" width="58" height="15" fill="#dcfce7" opacity=".5"/>
+              <!-- You are here arrow -->
+              <line x1="60" y1="36" x2="60" y2="22" stroke="#f87171" stroke-width="1.5" marker-end="url(#yah)"/>
+              <defs><marker id="yah" markerWidth="5" markerHeight="4" refX="4" refY="2" orient="auto"><polygon points="0 0,5 2,0 4" fill="#f87171"/></marker></defs>
+            </svg>
+            <div class="loc-text"><b>These alternating layers = the DBR mirror regions</b> (blue shaded in the device above). Light enters from the left (air/n₀), hits the H/L stack, and the standing wave you see above the layers is the light bouncing back and forth inside the mirror.</div>
+          </div>
+          <div class="dc-top">
+            <div class="dc-title">DBR layer stack cross-section · click any layer for details</div>
+            <div class="dc-sel" id="sel-info"></div>
+          </div>
+          <div style="position:relative">
+            <svg id="diag" style="width:100%;display:block;cursor:crosshair" height="230"></svg>
+            <div class="tt" id="tt">
+              <div class="tt-row"><span>Layer</span><span id="tt-li"></span></div>
+              <div class="tt-row"><span>Type</span><span id="tt-ty"></span></div>
+              <div class="tt-row"><span>n</span><span id="tt-n"></span></div>
+              <div class="tt-row"><span>d</span><span id="tt-d"></span></div>
+              <div class="tt-row"><span>n·d</span><span id="tt-nd"></span></div>
+              <div class="tt-row"><span>δ at λ₀</span><span id="tt-dlt"></span></div>
+            </div>
+          </div>
+          <div class="sw-note">
+            <svg width="16" height="16" viewBox="0 0 16 16" style="flex-shrink:0;margin-top:1px"><path d="M2,8 Q4,3 6,8 Q8,13 10,8 Q12,3 14,8" stroke="#f59e0b" stroke-width="1.8" fill="none"/></svg>
+            <span><b>Green curve = |E(x)|² standing wave.</b> This is the light intensity at each position inside the mirror. It oscillates because light waves travelling left and right inside the stack interfere with each other — the same way two people shaking a rope from both ends creates a standing wave. The amplitude builds from the surface inward — deeper layers see stronger light because more partial reflections have piled up constructively.</span>
+          </div>
+          <div class="field-legend" style="margin-top:.5rem">
+            <div class="fl"><div class="fl-sw" style="background:#1d4ed8"></div>n_H layer (GaAs, denser)</div>
+            <div class="fl"><div class="fl-sw" style="background:#bfdbfe"></div>n_L layer (AlAs, sparser)</div>
+            <div class="fl"><div class="fl-sw" style="background:#0d9488"></div>|E(x)|² — light intensity at each x position</div>
+            <div class="fl"><div class="fl-sw" style="background:#f87171"></div>selected layer</div>
+          </div>
+        </div>
+        <div class="howwe">
+          <b>How we get the R(λ) curve below:</b> For each wavelength λ in the sweep (540–1440 nm), we run the full TMM calculation above and compute R = |r|². Plotting all those R values vs λ gives the spectrum. The flat plateau = the stopband where all partial reflections arrive in phase. The oscillations on the sides = wavelengths where they only partially add up.
+        </div>
+        <div class="chart-card">
+          <div class="cc-title">R(λ) reflectance spectrum — <span id="cc-sub" style="color:var(--teal);font-weight:600"></span></div>
+          <div class="cwrap" style="height:240px">
+            <canvas id="rc" role="img" aria-label="DBR reflectance vs wavelength in nm"></canvas>
+          </div>
+        </div>
+        <div class="info-banner" id="ib">—</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- end .page -->
+
+<script>
+// ── Collapsible ────────────────────────────────────
+function toggleSection(id){
+  const sec=document.getElementById(id);
+  const body=document.getElementById(id+'-body');
+  const isCollapsed=sec.classList.contains('collapsed');
+  if(isCollapsed){
+    sec.classList.remove('collapsed');
+    body.style.maxHeight=body.scrollHeight+'px';
+    setTimeout(()=>body.style.maxHeight='none',350);
+  } else {
+    body.style.maxHeight=body.scrollHeight+'px';
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{sec.classList.add('collapsed');body.style.maxHeight='0';}));
+  }
+}
+function toggleQA(item){const isOpen=item.classList.contains('open');item.classList.toggle('open',!isOpen);}
+// init s2 collapsed
+document.getElementById('s2-body').style.maxHeight='0';
+// init s1 and s3 open
+['s1-body','s3-body'].forEach(id=>{const b=document.getElementById(id);b.style.maxHeight='none';});
+
+// ── QW panel ───────────────────────────────────────
+function openQW(){document.getElementById('qw-panel').classList.add('open');}
+function closeQW(){document.getElementById('qw-panel').classList.remove('open');}
+document.getElementById('qw-target').addEventListener('click',openQW);
+document.getElementById('qw-hover').addEventListener('click',openQW);
+['qw-target','qw-hover'].forEach(id=>{
+  document.getElementById(id).addEventListener('mouseenter',()=>{document.getElementById('qw-hover').style.fill='rgba(59,130,246,0.25)';});
+  document.getElementById(id).addEventListener('mouseleave',()=>{document.getElementById('qw-hover').style.fill='rgba(59,130,246,0)';});
+});
+
+// ── TMM ────────────────────────────────────────────
+const cadd=(a,b)=>[a[0]+b[0],a[1]+b[1]];
+const csub=(a,b)=>[a[0]-b[0],a[1]-b[1]];
+const cmul=(a,b)=>[a[0]*b[0]-a[1]*b[1],a[0]*b[1]+a[1]*b[0]];
+const cabs2=(a)=>a[0]*a[0]+a[1]*a[1];
+const cdiv=(a,b)=>{const d=cabs2(b);return[(a[0]*b[0]+a[1]*b[1])/d,(a[1]*b[0]-a[0]*b[1])/d]};
+const creal=(x)=>[x,0];
+const cexpi=(kx)=>[Math.cos(kx),Math.sin(kx)];
+const cscale=(a,s)=>[a[0]*s,a[1]*s];
+function layerM(n,d,lam){const dt=2*Math.PI*n*d/lam,c=Math.cos(dt),s=Math.sin(dt);return[[creal(c),[0,-s/n]],[[0,-n*s],creal(c)]];}
+function mm(A,B){return[[cadd(cmul(A[0][0],B[0][0]),cmul(A[0][1],B[1][0])),cadd(cmul(A[0][0],B[0][1]),cmul(A[0][1],B[1][1]))],[cadd(cmul(A[1][0],B[0][0]),cmul(A[1][1],B[1][0])),cadd(cmul(A[1][0],B[0][1]),cmul(A[1][1],B[1][1]))]];}
+function complexR(lam,p){
+  const dH=p.lam0/(4*p.nH),dL=p.lam0/(4*p.nL);
+  let M=[[[1,0],[0,0]],[[0,0],[1,0]]];
+  for(let i=0;i<p.N;i++){M=mm(M,layerM(p.nH,dH,lam));M=mm(M,layerM(p.nL,dL,lam));}
+  const e0=creal(p.n0),eS=creal(p.nS),m00=M[0][0],m01=M[0][1],m10=M[1][0],m11=M[1][1];
+  const num=csub(csub(cadd(cmul(e0,m00),cmul(cmul(e0,eS),m01)),m10),cmul(eS,m11));
+  const den=cadd(cadd(cmul(e0,m00),cmul(cmul(e0,eS),m01)),cadd(m10,cmul(eS,m11)));
+  return cdiv(num,den);
+}
+function reflectance(lam,p){return cabs2(complexR(lam,p));}
+
+function fieldProfile(p){
+  const lam=p.lam0,r=complexR(lam,p);
+  const dH=p.lam0/(4*p.nH),dL=p.lam0/(4*p.nL);
+  const layers=[];
+  for(let i=0;i<p.N;i++){layers.push({n:p.nH,d:dH,type:'H'});layers.push({n:p.nL,d:dL,type:'L'});}
+  let a=[1,0],b=[r[0],r[1]];
+  const pts=[];let xG=0;
+  const k0=2*Math.PI*p.n0/lam;
+  for(let s=0;s<=12;s++){const xl=-p.lam0/(4*p.nH)*(1-s/12);const E=cadd(cmul(a,cexpi(k0*xl)),cmul(b,cexpi(-k0*xl)));pts.push({x:xG+xl+p.lam0/(4*p.nH),I:cabs2(E)});}
+  for(let j=0;j<layers.length;j++){
+    const{n,d}=layers[j];const nP=j===0?p.n0:layers[j-1].n;const k=2*Math.PI*n/lam;
+    const R=nP/n,an=cscale(cadd(cscale(a,1+R),cscale(b,1-R)),0.5),bn=cscale(cadd(cscale(a,1-R),cscale(b,1+R)),0.5);
+    a=an;b=bn;
+    const NS=22;
+    for(let s=0;s<=NS;s++){const xl=(s/NS)*d;const E=cadd(cmul(a,cexpi(k*xl)),cmul(b,cexpi(-k*xl)));pts.push({x:xG+xl,I:cabs2(E),layer:j});}
+    a=cmul(a,cexpi(k*d));b=cmul(b,cexpi(-k*d));xG+=d;
+  }
+  return{pts,layers,totalX:xG};
+}
+
+// ── State ──────────────────────────────────────────
+const PRESETS={
+  'GaAs/AlAs':{mat:'GaAs/AlAs',wl:'980 nm — VCSEL',N:12,nH:3.59,nL:2.94,lam0:980,n0:1.0,nS:3.59},
+  'SiO₂/TiO₂':{mat:'SiO₂/TiO₂',wl:'532 nm — green',N:8,nH:2.35,nL:1.46,lam0:532,n0:1.0,nS:1.5},
+  'Si/SiO₂':{mat:'Si/SiO₂',wl:'1550 nm — telecom',N:8,nH:3.48,nL:1.46,lam0:1550,n0:1.0,nS:1.46},
+};
+let P={...PRESETS['GaAs/AlAs']},curPreset='GaAs/AlAs',selLayer=-1;
+
+// ── Chart ──────────────────────────────────────────
+const rcCtx=document.getElementById('rc').getContext('2d');
+const rcChart=new Chart(rcCtx,{type:'line',data:{datasets:[
+  {data:[],borderColor:'#0d9488',borderWidth:2.5,pointRadius:0,fill:true,backgroundColor:'rgba(13,148,136,0.07)',tension:0.25},
+  {data:[],borderColor:'rgba(220,38,38,0.35)',borderWidth:1,borderDash:[4,3],pointRadius:0,fill:false},
+  {data:[],borderColor:'rgba(99,102,241,0.45)',borderWidth:1,borderDash:[4,3],pointRadius:0,fill:false},
+]},options:{responsive:true,maintainAspectRatio:false,animation:false,parsing:false,
+  scales:{
+    x:{type:'linear',title:{display:true,text:'Wavelength λ (nm)',color:'#64748b',font:{size:11}},ticks:{color:'#64748b',font:{size:10},maxTicksLimit:8},grid:{color:'rgba(0,0,0,0.05)'}},
+    y:{min:0,max:100,title:{display:true,text:'R (%)',color:'#64748b',font:{size:11}},ticks:{color:'#64748b',font:{size:10}},grid:{color:'rgba(0,0,0,0.05)'}}
+  },
+  plugins:{legend:{display:false},tooltip:{backgroundColor:'#fff',titleColor:'#1a2233',bodyColor:'#64748b',borderColor:'#dde2ed',borderWidth:1,
+    callbacks:{title:i=>`λ = ${i[0].raw.x} nm`,label:i=>i.datasetIndex===0?`R = ${i[0].raw.y.toFixed(2)}%`:null}}}
+}});
+
+// ── Diagram ────────────────────────────────────────
+function drawDiagram(fp){
+  const svg=document.getElementById('diag');
+  const W=svg.getBoundingClientRect().width||600,H=230;
+  const dH=P.lam0/(4*P.nH),dL=P.lam0/(4*P.nL);
+  const totalD=P.N*(dH+dL);
+  const xPad=dH*1.5,totalSpan=xPad+totalD+dH*1.5;
+  const toX=x=>(x/totalSpan)*(W-20)+10;
+  const LAYY=80,LAYH=100,FIELDY=LAYY-5,FSCALE=55;
+  let html='';
+  html+=`<defs><marker id="ar2" markerWidth="6" markerHeight="5" refX="5" refY="2.5" orient="auto"><polygon points="0 0,6 2.5,0 5" fill="#0d9488"/></marker><marker id="al2" markerWidth="6" markerHeight="5" refX="1" refY="2.5" orient="auto-start-reverse"><polygon points="6 0,0 2.5,6 5" fill="#ef4444"/></marker></defs>`;
+  html+=`<text x="${toX(xPad*.5).toFixed(1)}" y="${LAYY-20}" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#94a3b8">n₀=${P.n0.toFixed(2)}</text>`;
+  html+=`<text x="${toX(xPad+totalD+dH*.75).toFixed(1)}" y="${LAYY-20}" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#94a3b8">n_S=${P.nS.toFixed(2)}</text>`;
+  let xC=xPad;
+  for(let i=0;i<P.N;i++){
+    const x1h=toX(xC),x2h=toX(xC+dH),selH=selLayer===i*2;
+    html+=`<rect x="${x1h.toFixed(1)}" y="${LAYY}" width="${Math.max(1,x2h-x1h).toFixed(1)}" height="${LAYH}" fill="${selH?'rgba(248,113,113,0.35)':'rgba(29,78,216,0.72)'}" data-li="${i*2}" class="lr" style="cursor:pointer"/>`;
+    if(x2h-x1h>16)html+=`<text x="${((x1h+x2h)/2).toFixed(1)}" y="${(LAYY+LAYH/2+4).toFixed(1)}" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="${selH?'#f87171':'#93c5fd'}" data-li="${i*2}" class="lr" style="pointer-events:none">H</text>`;
+    xC+=dH;
+    const x1l=toX(xC),x2l=toX(xC+dL),selL=selLayer===i*2+1;
+    html+=`<rect x="${x1l.toFixed(1)}" y="${LAYY}" width="${Math.max(1,x2l-x1l).toFixed(1)}" height="${LAYH}" fill="${selL?'rgba(248,113,113,0.28)':'rgba(191,219,254,0.55)'}" data-li="${i*2+1}" class="lr" style="cursor:pointer"/>`;
+    if(x2l-x1l>16)html+=`<text x="${((x1l+x2l)/2).toFixed(1)}" y="${(LAYY+LAYH/2+4).toFixed(1)}" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="${selL?'#f87171':'#3b82f6'}" data-li="${i*2+1}" class="lr" style="pointer-events:none">L</text>`;
+    xC+=dL;
+  }
+  let bx=xPad;
+  for(let i=0;i<=P.N*2;i++){const bxs=toX(bx).toFixed(1);html+=`<line x1="${bxs}" y1="${LAYY}" x2="${bxs}" y2="${LAYY+LAYH}" stroke="rgba(0,0,0,0.12)" stroke-width="0.5"/>`;bx+=i%2===0?dH:dL;}
+  const ax0=toX(xPad*.08),ax1=toX(xPad-4);
+  html+=`<line x1="${ax0}" y1="${LAYY+24}" x2="${ax1}" y2="${LAYY+24}" stroke="#0d9488" stroke-width="1.5" marker-end="url(#ar2)"/>`;
+  html+=`<text x="${((ax0+ax1)/2).toFixed(1)}" y="${LAYY+16}" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#0d9488">incident</text>`;
+  html+=`<line x1="${ax1}" y1="${LAYY+50}" x2="${ax0}" y2="${LAYY+50}" stroke="#ef4444" stroke-width="1.5" marker-end="url(#al2)"/>`;
+  html+=`<text x="${((ax0+ax1)/2).toFixed(1)}" y="${LAYY+68}" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#ef4444">reflected r</text>`;
+  if(fp&&fp.pts.length>1){
+    const maxI=Math.max(...fp.pts.map(d=>d.I))||1;
+    const pn=fp.pts.map(d=>({x:xPad+d.x,I:d.I/maxI}));
+    let ln='',ar='';
+    pn.forEach((pt,i)=>{const sx=toX(pt.x).toFixed(1),sy=(FIELDY-pt.I*FSCALE).toFixed(1);ln+=i===0?`M${sx},${sy}`:`L${sx},${sy}`;});
+    ar=ln+`L${toX(pn[pn.length-1].x).toFixed(1)},${FIELDY}L${toX(pn[0].x).toFixed(1)},${FIELDY}Z`;
+    html+=`<path d="${ar}" fill="rgba(13,148,136,0.1)"/>`;
+    html+=`<path d="${ln}" stroke="#0d9488" stroke-width="2" fill="none"/>`;
+    html+=`<line x1="10" y1="${FIELDY}" x2="${(W-10).toFixed(1)}" y2="${FIELDY}" stroke="rgba(0,0,0,0.08)" stroke-width="0.5"/>`;
+    html+=`<text x="8" y="${(FIELDY-FSCALE/2).toFixed(1)}" text-anchor="middle" font-family="JetBrains Mono" font-size="7.5" fill="#94a3b8" transform="rotate(-90,8,${(FIELDY-FSCALE/2).toFixed(1)})">|E|²</text>`;
+  }
+  const p1x=toX(xPad),p2x=toX(xPad+dH+dL);
+  html+=`<line x1="${p1x.toFixed(1)}" y1="${(LAYY+LAYH+10).toFixed(1)}" x2="${p2x.toFixed(1)}" y2="${(LAYY+LAYH+10).toFixed(1)}" stroke="#94a3b8" stroke-width="1"/>`;
+  html+=`<line x1="${p1x.toFixed(1)}" y1="${(LAYY+LAYH+6).toFixed(1)}" x2="${p1x.toFixed(1)}" y2="${(LAYY+LAYH+14).toFixed(1)}" stroke="#94a3b8" stroke-width="1"/>`;
+  html+=`<line x1="${p2x.toFixed(1)}" y1="${(LAYY+LAYH+6).toFixed(1)}" x2="${p2x.toFixed(1)}" y2="${(LAYY+LAYH+14).toFixed(1)}" stroke="#94a3b8" stroke-width="1"/>`;
+  html+=`<text x="${((p1x+p2x)/2).toFixed(1)}" y="${(LAYY+LAYH+24).toFixed(1)}" text-anchor="middle" font-family="JetBrains Mono" font-size="7.5" fill="#94a3b8">1 period Λ</text>`;
+  svg.innerHTML=html;
+  svg.querySelectorAll('.lr').forEach(el=>{
+    el.addEventListener('click',e=>{
+      const li=parseInt(e.currentTarget.getAttribute('data-li'));
+      selLayer=selLayer===li?-1:li;
+      if(selLayer>=0){
+        const isH=li%2===0,d=isH?P.lam0/(4*P.nH):P.lam0/(4*P.nL),n=isH?P.nH:P.nL;
+        document.getElementById('tt-li').textContent=`#${li+1}`;
+        document.getElementById('tt-ty').textContent=isH?'n_H (high index)':'n_L (low index)';
+        document.getElementById('tt-n').textContent=n.toFixed(3);
+        document.getElementById('tt-d').textContent=d.toFixed(1)+' nm';
+        document.getElementById('tt-nd').textContent=(n*d).toFixed(1)+' nm = λ₀/4';
+        document.getElementById('tt-dlt').textContent='π/2 rad (= 90°)';
+        document.getElementById('sel-info').textContent=`Layer ${li+1}: ${isH?'n_H':'n_L'} = ${n.toFixed(3)}, d = ${d.toFixed(1)} nm`;
+      } else {
+        document.getElementById('sel-info').textContent='';
+      }
+      drawDiagram(fp);
+    });
+    el.addEventListener('mousemove',e=>{
+      const tt=document.getElementById('tt');
+      const wr=svg.closest('div').getBoundingClientRect();
+      tt.style.left=(e.clientX-wr.left+10)+'px';tt.style.top=(e.clientY-wr.top-10)+'px';tt.classList.add('show');
+    });
+    el.addEventListener('mouseleave',()=>document.getElementById('tt').classList.remove('show'));
+  });
+}
+
+// ── Main update ─────────────────────────────────────
+function update(){
+  const dH=P.lam0/(4*P.nH),dL=P.lam0/(4*P.nL);
+  document.getElementById('dH').textContent=dH.toFixed(1)+' nm';
+  document.getElementById('dL').textContent=dL.toFixed(1)+' nm';
+  document.getElementById('dTot').textContent=(P.N*(dH+dL)).toFixed(0)+' nm';
+  const mn=P.lam0*.55,mx=P.lam0*1.45,nPts=320;
+  const spec=Array.from({length:nPts},(_,i)=>{const lam=mn+(i/(nPts-1))*(mx-mn);return{x:Math.round(lam),y:parseFloat((reflectance(lam,P)*100).toFixed(2))};});
+  const peak=Math.max(...spec.map(d=>d.y));
+  rcChart.data.datasets[0].data=spec;
+  rcChart.data.datasets[1].data=[{x:Math.round(mn),y:99},{x:Math.round(mx),y:99}];
+  rcChart.data.datasets[2].data=[{x:P.lam0,y:0},{x:P.lam0,y:100}];
+  rcChart.update('none');
+  const pe=document.getElementById('spR');
+  pe.textContent=peak.toFixed(2)+'%';pe.className='sv'+(peak>=99?' good':peak>=90?' warn':' bad');
+  document.getElementById('spS').textContent='~'+Math.round(P.lam0*(8/Math.PI)*Math.asin((P.nH-P.nL)/(P.nH+P.nL)))+' nm';
+  document.getElementById('spC').textContent=(P.nH/P.nL).toFixed(3);
+  document.getElementById('spN').textContent=P.N*2;
+  document.getElementById('cc-sub').textContent=`peak R = ${peak.toFixed(2)}%`;
+  const fp=fieldProfile(P);
+  drawDiagram(fp);
+  const ib=document.getElementById('ib');
+  ib.innerHTML=peak>=99
+    ?`<span class="good">✓ R = ${peak.toFixed(2)}%</span> — ≥99% reflectance achieved at λ₀ = ${P.lam0} nm with N = ${P.N} periods (${P.N*2} layers). The |E|² standing wave concentrates in the high-index layers and builds from the surface inward — this is exactly what ANSYS HFSS shows in a field plot.`
+    :`Peak R = ${peak.toFixed(2)}% — <span class="bad">below 99% target.</span> Increase N or the index contrast n_H/n_L = ${(P.nH/P.nL).toFixed(2)}. At the quarter-wave condition δ = π/2, each M_j is off-diagonal, maximising constructive interference of partial reflections.`;
+  document.getElementById('vN').textContent=P.N;
+  document.getElementById('vH').textContent=P.nH.toFixed(2);
+  document.getElementById('vL').textContent=P.nL.toFixed(2);
+  document.getElementById('vW').textContent=P.lam0;
+  document.getElementById('vN0').textContent=P.n0.toFixed(2);
+  document.getElementById('vNS').textContent=P.nS.toFixed(2);
+  document.getElementById('hpill').textContent=`${curPreset} · λ₀ = ${P.lam0} nm`;
+}
+
+// ── Presets & sliders ──────────────────────────────
+const pl=document.getElementById('plist');
+Object.entries(PRESETS).forEach(([k,v])=>{
+  const b=document.createElement('button');
+  b.className='pb'+(k===curPreset?' on':'');
+  b.innerHTML=`<span class="pm">${v.mat}</span><span class="pw">${v.wl}</span>`;
+  b.onclick=()=>{P={...v};curPreset=k;selLayer=-1;document.querySelectorAll('.pb').forEach(x=>x.classList.remove('on'));b.classList.add('on');syncS();update();};
+  pl.appendChild(b);
+});
+function syncS(){[['sN','N'],['sH','nH'],['sL','nL'],['sW','lam0'],['sN0','n0'],['sNS','nS']].forEach(([id,k])=>{document.getElementById(id).value=P[k];});}
+[['sN','N',true],['sH','nH',false],['sL','nL',false],['sW','lam0',false],['sN0','n0',false],['sNS','nS',false]].forEach(([id,key,isInt])=>{
+  document.getElementById(id).addEventListener('input',e=>{
+    P[key]=isInt?parseInt(e.target.value):parseFloat(e.target.value);
+    curPreset='Custom';document.querySelectorAll('.pb').forEach(x=>x.classList.remove('on'));update();
+  });
+});
+window.addEventListener('resize',()=>update());
+update();
+</script>
+</body>
+</html>
